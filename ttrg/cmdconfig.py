@@ -16,10 +16,12 @@ class CmdConfig(object):
 
         g = p.add_mutually_exclusive_group()
         g.add_argument('-f', '--filters', help='TODO', )
+        g.add_argument('-F', '--show-filters', action='store_true', help='TODO', )
         g.add_argument('--show-raw-filters', action='store_true', help='TODO')
 
         g = p.add_mutually_exclusive_group()
         g.add_argument('-p', '--params', help='TODO', )
+        g.add_argument('-P', '--show-params', action='store_true', help='TODO', )
         g.add_argument('--show-raw-params', action='store_true', help='TODO', )
 
         p.add_argument('-o', '--output', required=True, help='TODO', )

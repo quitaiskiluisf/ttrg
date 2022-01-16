@@ -2,9 +2,48 @@
 
 import base64
 import fileinput
+import xml.dom.minidom
 
 from cmdconfig import CmdConfig
 from tbcwsfactory import TBCWSFactory
+from xmlutils import xml_first_child_or_error
+
+
+def extract_params_available(params_template):
+    ''' Generates a dictionary with all of the parameters the report exposes, their description and current value. '''
+    params = dict()
+    array_of_rpt_parameter_report_par = xml_first_child_or_error(params_template, 'ArrayOfRptParameterReportPar')
+    for p in array_of_rpt_parameter_report_par.getElementsByTagName('RptParameterReportPar'):
+        param_name = xml_first_child_or_error(p, 'ParamName').firstChild.nodeValue
+        param_description = xml_first_child_or_error(p, 'Description').firstChild.nodeValue
+        param_type = xml_first_child_or_error(xml_first_child_or_error(p, 'Type'), 'Data').firstChild.nodeValue
+        param_value = None
+        if (xml_first_child_or_error(p, 'Value').firstChild != None):
+            param_value = xml_first_child_or_error(p, 'Value').firstChild.nodeValue
+        param_visible = xml_first_child_or_error(p, 'Visible').firstChild.nodeValue
+        params[param_name] = (param_value, param_type, param_visible, param_description, )
+
+    return params
+
+
+def print_params_available(params_available):
+    ''' Pretty-print the params which the report exposes. '''
+    for k, v in params_available.items():
+        value = v[0]
+        if (value == None):
+            value = 'None'
+        else:
+            value = f'"{value}"'
+
+        descr = ''
+        if (v[3] != k):
+            descr = f' (Long description = "{v[3]}")'
+
+        visible = ''
+        if (v[2].upper() == "FALSE"):
+            visible = "(HIDDEN PARAMETER) "
+
+        print (f'{visible}{k} ({v[1]}) = {value}{descr}')
 
 
 if __name__ == '__main__':
@@ -18,14 +57,36 @@ if __name__ == '__main__':
     # Fetches the parameters and filters available, but only if the user asked them to be
     # displayed.
     filter_template_raw, params_template_raw = None, None
+    filter_template, params_template = None, None
+    filter_available, params_available = None, None
 
-    if (args['show_raw_filters'] or args['show_raw_params']):
+    if (args['show_filters'] or args['show_raw_filters']
+        or args['show_params'] or args['show_raw_params']):
         filter_template_raw, params_template_raw = tbcr().GetReportInfo(codcoligada, idreport)
 
-    if (args['show_raw_filters'] or args['show_raw_params']):
+        # Change both the filters and the parameters to a xml object
+        if filter_template_raw != None:
+            filter_template = xml.dom.minidom.parseString(filter_template_raw)
+
+        if params_template_raw != None:
+            params_template = xml.dom.minidom.parseString(params_template_raw)
+
+        filter_available = ''
+        params_available = extract_params_available(params_template)
+
+    if (args['show_filters'] or args['show_raw_filters']
+        or args['show_params'] or args['show_raw_params']):
+        if args['show_filters']:
+            print('Default filter string:')
+            raise NotImplemented()
+
         if args['show_raw_filters']:
             print('Filters XML:')
             print(filter_template_raw)
+
+        if args['show_params']:
+            print('The report exposes the following parameters:')
+            print_params_available(params_available)
 
         if (args['show_raw_params']):
             print('Parameters XML:')
