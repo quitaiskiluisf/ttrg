@@ -13,8 +13,17 @@ class CmdConfig(object):
         p = argparse.ArgumentParser(description=dsc)
         p.add_argument('-c', '--codcoligada', required=True, help='TODO', type=int, )
         p.add_argument('-r', '--idreport', required=True, help='TODO', type=int, )
-        p.add_argument('-f', '--filters', required=True, help='TODO', )
-        p.add_argument('-p', '--params', required=True, help='TODO', )
+
+        g = p.add_mutually_exclusive_group()
+        g.add_argument('-f', '--filters', help='TODO', )
+        g.add_argument('-F', '--show-filters', action='store_true', help='TODO', )
+        g.add_argument('--show-raw-filters', action='store_true', help='TODO')
+
+        g = p.add_mutually_exclusive_group()
+        g.add_argument('-p', '--params', action='append', help='TODO', )
+        g.add_argument('-P', '--show-params', action='store_true', help='TODO', )
+        g.add_argument('--show-raw-params', action='store_true', help='TODO', )
+
         p.add_argument('-o', '--output', required=True, help='TODO', )
 
         p.add_argument('-v', '--version', action='version', version='%(prog)s DEV', )
