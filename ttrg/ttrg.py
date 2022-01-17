@@ -156,11 +156,11 @@ if __name__ == '__main__':
     print('   ... report ready. ID = {}'.format(guid_rel))
 
     print('Getting file size...')
-    tamanho = tbcr().GetGeneratedReportSize(guid_rel)
-    print('   ... file size = {} bytes'.format(tamanho))
+    size = tbcr().GetGeneratedReportSize(guid_rel)
+    print('   ... file size = {} bytes'.format(size))
 
     print('Downloading file...')
-    arquivo_base64 = tbcr().GetFileChunk(guid_rel, 0, tamanho)
+    arquivo_base64 = tbcr().GetFileChunk(guid_rel, 0, size)
     print('   ... file downloaded')
 
     print('Saving file to disk...')
