@@ -153,11 +153,11 @@ if __name__ == '__main__':
                                      filter_template.toxml(),
                                      params_template.toxml(),
                                      args.get('output'))
-    print('   ... report ready. ID = {}'.format(guid_rel))
+    print(f'   ... report ready. ID = {guid_rel}')
 
     print('Getting file size...')
     size = tbcr().GetGeneratedReportSize(guid_rel)
-    print('   ... file size = {} bytes'.format(size))
+    print(f'   ... file size = {size} bytes')
 
     print('Downloading file...')
     arquivo_base64 = tbcr().GetFileChunk(guid_rel, 0, size)
