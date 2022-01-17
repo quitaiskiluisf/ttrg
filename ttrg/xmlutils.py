@@ -18,3 +18,13 @@ def xml_first_child_or_error(xml_fragment, tag=None):
             if tag == None or child.tagName == tag:
                 return child
         raise Exception(f'Element "{xml_fragment.tagName}" does not have any element "{tag}" as a child node.')
+
+
+def xml_set_node_value(xml_node, value):
+    ''' If the given node already contains a TextNode, replace its content with the new value;
+        if it does not contain a TextNode, create one and add to it with the new value. '''
+    if xml_node.firstChild != None:
+        xml_node.firstChild.nodeValue = value
+    else:
+        n = xml_node.ownerDocument.createTextNode(value)
+        xml_node.appendChild(n)

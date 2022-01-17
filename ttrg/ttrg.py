@@ -1,12 +1,11 @@
 #! /usr/bin/env python3
 
 import base64
-import fileinput
 import xml.dom.minidom
 
 from cmdconfig import CmdConfig
 from tbcwsfactory import TBCWSFactory
-from xmlutils import xml_first_child_or_error
+from xmlutils import xml_first_child_or_error, xml_set_node_value
 
 
 def extract_params_available(params_template):
@@ -46,6 +45,54 @@ def print_params_available(params_available):
         print (f'{visible}{k} ({v[1]}) = {value}{descr}')
 
 
+def parse_params_supplied(raw_params):
+    ''' Turns the supplied parameters into a dictionary. '''
+    params = dict()
+
+    if raw_params != None:
+        for x in raw_params:
+            s = x.split('=', maxsplit=1)
+            if len(s) == 2:
+                params[s[0]] = s[1]
+            else:
+                params[s[0]] = None
+
+    return params
+
+
+def fill_filter(filter_template, supplied_filter):
+    ''' Fills the supplied filter in the corresponding XML tag. '''
+    array_of_rpt_filter_report_par = xml_first_child_or_error(filter_template, 'ArrayOfRptFilterReportPar')
+    rpt_filter_report_par = xml_first_child_or_error(array_of_rpt_filter_report_par, 'RptFilterReportPar')
+    value = xml_first_child_or_error(rpt_filter_report_par, 'Value')
+    xml_set_node_value(value, supplied_filter)
+
+
+def fill_parameters(params_template, supplied_parameters):
+    ''' Fills the supplied parameters in the corresponding XML tag. '''
+    params = dict()
+    # Makes a copy of all of the parameters which were supplied. This will be used to detect if the user supplied
+    # an unknown parameter
+    all_supplied_parameters = set(supplied_parameters.keys())
+
+    array_of_rpt_parameter_report_par = xml_first_child_or_error(params_template, 'ArrayOfRptParameterReportPar')
+    for p in array_of_rpt_parameter_report_par.getElementsByTagName('RptParameterReportPar'):
+        param_name = xml_first_child_or_error(p, 'ParamName').firstChild.nodeValue
+        param_value = xml_first_child_or_error(p, 'Value')
+
+        if param_name in supplied_parameters:
+            xml_set_node_value(param_value, supplied_parameters[param_name])
+            if param_name in all_supplied_parameters:
+                all_supplied_parameters.remove(param_name)
+
+    if len(all_supplied_parameters) > 0:
+        msg = 'The following parameters were supplied, but were not found on the list of parameters ' + \
+              'accepted by the report: {}'
+        raise Exception(msg.format(', '.join(all_supplied_parameters)))
+
+    return params
+
+
 if __name__ == '__main__':
     args = CmdConfig.get()
 
@@ -55,13 +102,13 @@ if __name__ == '__main__':
     tbcr = TBCWSFactory().get_ws_report
 
     # Fetches the parameters and filters available, but only if the user asked them to be
-    # displayed.
+    # displayed or if the user supplied any of those for generating the report.
     filter_template_raw, params_template_raw = None, None
     filter_template, params_template = None, None
     filter_available, params_available = None, None
 
-    if (args['show_filters'] or args['show_raw_filters']
-        or args['show_params'] or args['show_raw_params']):
+    if (args['filters'] != None or args['show_filters'] or args['show_raw_filters']
+        or args['params'] != None or args['show_params'] or args['show_raw_params']):
         filter_template_raw, params_template_raw = tbcr().GetReportInfo(codcoligada, idreport)
 
         # Change both the filters and the parameters to a xml object
@@ -95,23 +142,16 @@ if __name__ == '__main__':
         # Exit after showing the items
         exit(0)
 
-    args['filters'] = f'''<?xml version="1.0" encoding="utf-16"?>
-<ArrayOfRptFilterReportPar xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.totvs.com.br/RM/">
-  <RptFilterReportPar>
-    <BandName>rptReport1</BandName>
-    <FiltersByTable />
-    <MainFilter>true</MainFilter>
-    <Value>{args['filters']}</Value>
-  </RptFilterReportPar>
-</ArrayOfRptFilterReportPar>'''
-
-    args['params'] = ''.join(fileinput.input(files=args['params']))
+    # Fill in the filters and parameters objects
+    fill_filter(filter_template, args['filters'])
+    parsed_params = parse_params_supplied(args['params'])
+    fill_parameters(params_template, parsed_params)
 
     print('Generating report...')
     guid_rel = tbcr().GenerateReport(codcoligada,
                                      idreport,
-                                     args.get('filters'),
-                                     args.get('parameters'),
+                                     filter_template.toxml(),
+                                     params_template.toxml(),
                                      args.get('output'))
     print('   ... report ready. ID = {}'.format(guid_rel))
 
